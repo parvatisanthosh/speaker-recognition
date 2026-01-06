@@ -7,7 +7,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import numpy as np
-from pyannote.audio import Model, Inference
 import torch
 import io
 import wave
@@ -15,6 +14,11 @@ import json
 from datetime import datetime
 import sqlite3
 from scipy.spatial.distance import cosine
+
+# Set environment before importing pyannote
+os.environ['TORCHAUDIO_BACKEND'] = 'soundfile'
+
+from pyannote.audio import Model, Inference
 
 app = Flask(__name__)
 CORS(app)  # Allow Flutter app to connect
@@ -41,6 +45,9 @@ SIMILARITY_THRESHOLD = 0.7
 # ============================================================
 
 print("🔊 Loading Pyannote model...")
+model = None
+inference = None
+
 try:
     # Load the embedding model
     model = Model.from_pretrained(
@@ -52,8 +59,6 @@ try:
 except Exception as e:
     print(f"❌ Failed to load model: {e}")
     print("⚠️ Make sure PYANNOTE_AUTH_TOKEN is set correctly")
-    model = None
-    inference = None
 
 # ============================================================
 # DATABASE SETUP
@@ -127,8 +132,14 @@ def get_embedding(audio_array, sample_rate):
         # Convert to torch tensor
         waveform = torch.from_numpy(audio_array).float()
         
+        # Resample if needed (Pyannote expects 16kHz)
+        if sample_rate != 16000:
+            import torchaudio.transforms as T
+            resampler = T.Resample(sample_rate, 16000)
+            waveform = resampler(waveform)
+        
         # Get embedding
-        embedding = inference({"waveform": waveform, "sample_rate": sample_rate})
+        embedding = inference({"waveform": waveform, "sample_rate": 16000})
         
         # Convert to numpy array
         return embedding.cpu().numpy()
@@ -248,14 +259,7 @@ def health():
 
 @app.route('/enroll', methods=['POST'])
 def enroll_speaker():
-    """
-    Enroll a new speaker
-    
-    Expected: multipart/form-data
-    - audio: WAV file (16-bit, mono/stereo, 16kHz recommended)
-    - name: Speaker name
-    - emoji: Optional emoji (default: 👤)
-    """
+    """Enroll a new speaker"""
     if inference is None:
         return jsonify({'error': 'Model not loaded'}), 500
     
@@ -312,12 +316,7 @@ def enroll_speaker():
 
 @app.route('/recognize', methods=['POST'])
 def recognize():
-    """
-    Recognize a speaker from audio
-    
-    Expected: multipart/form-data
-    - audio: WAV file (16-bit, mono/stereo, 16kHz recommended)
-    """
+    """Recognize a speaker from audio"""
     if inference is None:
         return jsonify({'error': 'Model not loaded'}), 500
     
