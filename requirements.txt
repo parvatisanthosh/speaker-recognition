@@ -1,9 +1,9 @@
 flask==3.0.0
 flask-cors==4.0.0
-pyannote.audio==3.1.1
-torch>=2.0.0
-torchaudio>=2.0.0
-numpy>=1.24.0
+pyannote.audio==3.3.1
+torch==2.1.0
+torchaudio==2.1.0
+numpy>=1.24.0,<2.0.0
 scipy>=1.11.0
 soundfile>=0.12.0
 gunicorn==21.2.0

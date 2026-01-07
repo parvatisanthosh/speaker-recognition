@@ -16,7 +16,7 @@ import sqlite3
 from scipy.spatial.distance import cosine
 
 # Set environment before importing pyannote
-os.environ['TORCHAUDIO_BACKEND'] = 'soundfile'
+
 
 from pyannote.audio import Model, Inference
 
