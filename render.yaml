@@ -2,7 +2,6 @@ services:
   - type: web
     name: dhwani-speaker-recognition
     runtime: python
-    pythonVersion: 3.11.9
     buildCommand: |
       apt-get update
       apt-get install -y libsndfile1 ffmpeg
